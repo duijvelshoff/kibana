@@ -1,0 +1,135 @@
+{
+    "parameters": {
+        "siteName": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the webapp that you wish to create."
+            }
+        },
+        "appServicePlanSKU": {
+            "type": "string",
+            "allowedValues": [
+                "Basic",
+                "Standard"
+            ],
+            "defaultValue": "Standard"
+        },
+        "appServicePlanWorkerSize": {
+            "type": "string",
+            "allowedValues": [
+                "0",
+                "1",
+                "2"
+            ],
+            "defaultValue": "0"
+        },
+        "ClientId": {
+            "type": "string",
+            "metadata": {
+                "description": "The Object ID of the registerd Application in Azure AD."
+            }
+        },
+        "ClientSecret": {
+            "type": "string",
+            "metadata": {
+                "description": "The Key for this application in the registerd Application in Azure AD."
+            }
+        },
+        "ElasticsearchUrl": {
+            "type": "string",
+            "metadata": {
+                "description": "The url of the ElastichSearch server."
+            }
+        },
+        "ElasticsearchUsername": {
+            "type": "string",
+            "metadata": {
+                "description": "The username to authenticate to the ElastichSearch server."
+            }
+        },
+        "ElasticsearchPassword": {
+            "type": "string",
+            "metadata": {
+                "description": "The password to authenticate to the ElastichSearch server."
+            }
+        }
+    },
+    "variables": {
+        "cookieSecret": "[uniquestring(resourceGroup().id)]",
+        "appServicePlanName": "[concat(parameters('siteName'), '-plan')]",
+        "appServicePlanSKUName": "[if(equals(parameters('appServicePlanSKU'), 'Basic'), 'B1', 'S1')]"
+    },
+    "resources": [
+        {
+            "apiVersion": "2016-03-01",
+            "name": "[variables('appServicePlanName')]",
+            "type": "Microsoft.Web/serverfarms",
+            "kind": "linux",
+            "sku": {
+                "tier": "[parameters('appServicePlanSKU')]",
+                "name": "[variables('appServicePlanSKUName')]"
+            },
+            "properties": {
+                "name": "[variables('appServicePlanName')]",
+                "workerSize": "[parameters('appServicePlanWorkerSize')]",
+                "numberOfWorkers": 1,
+                "reserved": true
+            },
+            "location": "[resourceGroup().location]"
+        },
+        {
+            "apiVersion": "2016-03-01",
+            "name": "[parameters('siteName')]",
+            "type": "Microsoft.Web/sites",
+            "dependsOn": [
+                "[concat('Microsoft.Web/serverfarms/', variables('appServicePlanName'))]"
+            ],
+            "properties": {
+                "name": "[parameters('siteName')]",
+                "siteConfig": {
+                    "appSettings": [
+                        {
+                            "name": "WEBSITES_ENABLE_APP_SERVICE_STORAGE",
+                            "value": "false"
+                        },
+                        {
+                            "name": "OAUTH2_PROXY_CLIENT_ID",
+                            "value": "[parameters('ClientId')]"
+                        },
+                        {
+                            "name": "OAUTH2_PROXY_CLIENT_SECRET",
+                            "value": "[parameters('ClientSecret')]"
+                        },
+                        {
+                            "name": "OAUTH2_PROXY_COOKIE_SECRET",
+                            "value": "[variables('cookieSecret')]"
+                        },
+                        {
+                            "name": "OAUTH_TENANT_ID",
+                            "value": "[subscription().tenantId]"
+                        },
+                        {
+                            "name": "ELASTICSEARCH_URL",
+                            "value": "[parameters('ElasticsearchUrl')]"
+                        },
+                        {
+                            "name": "ELASTICSEARCH_USERNAME",
+                            "value": "[parameters('ElasticsearchUsername')]"
+                        },
+                        {
+                            "name": "ELASTICSEARCH_PASSWORD",
+                            "value": "[parameters('ElasticsearchPassword')]"
+                        }
+                    ],
+                    "appCommandLine": "",
+                    "linuxFxVersion": "DOCKER|duijvelshoff/kibana:latest",
+                    "AlwaysOn": true
+                },
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms/', variables('appServicePlanName'))]"
+            },
+            "location": "[resourceGroup().location]"
+        }
+    ],
+    "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0"
+}
