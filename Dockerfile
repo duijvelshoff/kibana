@@ -53,7 +53,7 @@ WORKDIR $GOPATH
 RUN go get github.com/uswitch/oauth2_proxy
 
 # build kibana container
-FROM docker.elastic.co/kibana/kibana:6.4.2
+FROM docker.elastic.co/kibana/kibana-oss:6.4.2
 
 # copy oauth_proxy from build environment
 COPY --from=build-env /go/bin /usr/bin/.
